@@ -27,7 +27,7 @@
         <NuxtLink :to="`/watch/${movie.id}`" class="block">
           <div class="aspect-video bg-gray-900 relative">
             <img v-if="movie.cover_url" :src="movie.cover_url" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
-            <div v-else class="w-full h-full flex items-center justify-center text-gray-600">無海報</div>
+            <div v-else class="w-full h-full flex items-center justify-center text-gray-600 font-bold">無海報</div>
             
             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
               <span class="text-5xl drop-shadow-lg">▶️</span>
@@ -38,6 +38,10 @@
             <p class="text-sm text-gray-400 mt-1 line-clamp-2">{{ movie.description || '無簡介' }}</p>
           </div>
         </NuxtLink>
+      </div>
+      
+      <div v-if="movies.length === 0" class="col-span-full text-center py-20 text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">
+        目前片庫空空如也，趕快去後台上傳第一部電影吧！
       </div>
     </div>
 
@@ -75,6 +79,7 @@
 import { ref } from 'vue'
 
 const supabase = useSupabaseClient()
+// 確保對應你的 HF 網址
 const API_BASE_URL = 'https://lawxstudents168-meowtube-api.hf.space'
 
 // 狀態控制
@@ -95,7 +100,7 @@ const { data: movies, pending, refresh } = await useAsyncData('movies', async ()
 })
 
 // ==========================================
-// 🗑️ 刪除功能 (同步刪除 Supabase 與 TG 檔案)
+// 🗑️ 刪除功能 (同步刪除 Supabase 與 TG 檔案，畫面即時更新)
 // ==========================================
 const handleDelete = async (dbId, tgMessageId) => {
   if (!confirm('⚠️ 確定要刪除這部電影嗎？\n這將會同步銷毀 Telegram 雲端上的實體影片檔，動作無法復原！')) return
@@ -113,8 +118,11 @@ const handleDelete = async (dbId, tgMessageId) => {
     const { error } = await supabase.from('movies').delete().eq('id', dbId)
     if (error) throw error
 
-    // 重新載入畫面
-    await refresh()
+    // 3. 畫面即時更新 (不過度依賴 refresh)
+    movies.value = movies.value.filter(movie => movie.id !== dbId)
+    
+    alert('✅ 電影已成功刪除！')
+
   } catch (err) {
     alert('❌ 刪除失敗: ' + err.message)
   }
